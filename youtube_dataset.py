@@ -1,5 +1,8 @@
+import torch
+from torch.autograd import  Variable
 import pandas as pd
 from torch.utils.data import Dataset
+import numpy as np
 
 class YoutubeDataset(Dataset):
     def __init__(self,videos_data, channels_data):
@@ -14,6 +17,7 @@ class YoutubeDataset(Dataset):
         self.data = self.data.dropna(subset=['followers'])
         self.data = self.data.reset_index(drop=True)
         self.numerical_variables = ['followers', 'videos', 'title_length', 'number_of_tags']
+
     def _get_title_length(self, title):
         return len(title)
 
@@ -35,5 +39,6 @@ class YoutubeDataset(Dataset):
 
     def __getitem__(self, idx):
         return (
-            self.data.loc[idx, self.numerical_variables].values
-        )
+            torch.Tensor(self.data.loc[idx, self.numerical_variables].to_list()),
+            Variable(torch.FloatTensor([self.data.loc[idx, "views"]]))
+            )
