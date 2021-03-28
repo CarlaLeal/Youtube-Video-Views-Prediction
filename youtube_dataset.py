@@ -13,10 +13,12 @@ class YoutubeDataset(Dataset):
         videos['number_of_tags'] = videos.apply(lambda row: self._get_number_of_tags(row['tags']), axis=1)
         videos['title_contains_all_caps_word'] = videos.apply(lambda row: self._contains_all_caps_word(row['title']), axis=1)
         channels = channels.rename(columns={'title':'channel_title', 'category_name': 'channel_category_name', 'category_id': 'channel_category_id'})
+        self.numerical_variables = ['followers', 'videos', 'title_length', 'number_of_tags', 'views']
         self.data = videos.merge(channels, on='channel_title', how='left')
         self.data = self.data.dropna(subset=['followers'])
         self.data = self.data.reset_index(drop=True)
-        self.numerical_variables = ['followers', 'videos', 'title_length', 'number_of_tags']
+        self.data  = self.data[self.numerical_variables]
+        self.data=(self.data-self.data.min())/(self.data.max()-self.data.min())
 
     def _get_title_length(self, title):
         return len(title)
