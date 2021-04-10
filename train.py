@@ -1,11 +1,11 @@
 from model import ViewsPredictor
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 from youtube_dataset import YoutubeDataset
 import numpy as np
 from sklearn.model_selection import KFold
 
-def train_model(training_data_loader, testing_data_loader, num_epochs, model, batch_size):
+def train_model(training_data_loader, testing_data_loader, num_epochs, model, batch_size, results, k_fold):
     model.train()
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
@@ -29,27 +29,27 @@ def train_model(training_data_loader, testing_data_loader, num_epochs, model, ba
             loss = criterion(y_pred, views)
             validation_loss+=loss.item()
         validation_losses.append(validation_loss/batch_size)
-        print({"Epoch": epoch, "training_loss": training_loss, 'validation loss': validation_loss})
-    return validation_loss
+    results[k_fold] = validation_loss/batch_size
+    return results
 
 
-
-
+def get_dataset(ids, dataset, batch_size):
+    sampler = SubsetRandomSampler(training_ids)
+    data_loader = DataLoader(dataset, batch_size=batch_size,sampler=sampler)
+    return data_loader
 
 if __name__ == '__main__':
     videos_data = '~/Datasets/youtube/USvideos.csv'
     channels_data = '~/Datasets/youtube/channels.csv'
     dataset = YoutubeDataset(videos_data, channels_data)
-    training_size = round(0.8*len(dataset))
-    testing_size = len(dataset) - training_size
-    training_data, testing_data = random_split(dataset, [training_size, testing_size])
-    training_data_loader = DataLoader(dataset, batch_size=100)
-    testing_data_loader = DataLoader(testing_data, batch_size=100)
     model = ViewsPredictor(dataset)
-    total_final_validation_loss = 0
-    for i in range(0,10):
-        final_validation_loss = train_model(training_data_loader, testing_data_loader, 50, model, batch_size=100)
-        total_final_validation_loss+=final_validation_loss
-    average_validation_loss = total_final_validation_loss / 10
-    print(f"Average validation loss is: {average_validation_loss}")
-
+    k_folds = 5
+    num_epochs = 20
+    batch_size = 100
+    kfold = KFold(n_splits=k_folds, shuffle=True)
+    results = {}
+    for i, (training_ids, testing_ids) in enumerate(kfold.split(dataset)):
+        training_set =  get_dataset(training_ids, dataset, batch_size)
+        testing_set = get_dataset(testing_ids, dataset, batch_size)
+        results = train_model(training_set, testing_set, num_epochs, model, batch_size, results, kfold)
+        print(f"Results at kfold {i}: {results}")
