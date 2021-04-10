@@ -2,6 +2,8 @@ from model import ViewsPredictor
 import torch
 from torch.utils.data import DataLoader, random_split
 from youtube_dataset import YoutubeDataset
+import numpy as np
+from sklearn.model_selection import KFold
 
 def train_model(training_data_loader, testing_data_loader, num_epochs, model, batch_size):
     model.train()
@@ -28,6 +30,7 @@ def train_model(training_data_loader, testing_data_loader, num_epochs, model, ba
             validation_loss+=loss.item()
         validation_losses.append(validation_loss/batch_size)
         print({"Epoch": epoch, "training_loss": training_loss, 'validation loss': validation_loss})
+    return validation_loss
 
 
 
@@ -43,4 +46,10 @@ if __name__ == '__main__':
     training_data_loader = DataLoader(dataset, batch_size=100)
     testing_data_loader = DataLoader(testing_data, batch_size=100)
     model = ViewsPredictor(dataset)
-    train_model(training_data_loader, testing_data_loader, 50, model, batch_size=100)
+    total_final_validation_loss = 0
+    for i in range(0,10):
+        final_validation_loss = train_model(training_data_loader, testing_data_loader, 50, model, batch_size=100)
+        total_final_validation_loss+=final_validation_loss
+    average_validation_loss = total_final_validation_loss / 10
+    print(f"Average validation loss is: {average_validation_loss}")
+
